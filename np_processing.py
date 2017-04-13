@@ -7,8 +7,12 @@ from nltk.classify.scikitlearn import SklearnClassifier
 from sklearn.naive_bayes import MultinomialNB, GaussianNB, BernoulliNB
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.svm import SVC, LinearSVC, NuSVC
+from nltk.classify import ClassifierI
+from statistics import mode
 import random
 import pickle
+
+
 
 # Example of tokenizing
 example_text = 'Hi there, how are you doing today. Python is awesome. The sky is blue.'
@@ -157,13 +161,41 @@ LogisticRegression_classifier = SklearnClassifier(LogisticRegression())
 LogisticRegression_classifier.train(training_set)
 print(nltk.classify.accuracy(LogisticRegression_classifier, testing_set))
 
-SVC_classifier = SklearnClassifier(SVC())
-SVC_classifier.train(training_set)
-print(nltk.classify.accuracy(SVC_classifier, testing_set))
+# SVC_classifier = SklearnClassifier(SVC())
+# SVC_classifier.train(training_set)
+# print(nltk.classify.accuracy(SVC_classifier, testing_set))
 
 
+#Combining algos to vote
+class VoteClassifier(ClassifierI):
+	def __init__(self, *classifiers):
+		self._classifiers = classifiers
 
+	def classify(self, features):
+		votes = []
+		for c in self._classifiers:
+			v = c.classify(features)
+			votes.append(v)
+		return mode(votes)
 
+	def confidence(self, features):
+		votes = []
+		for c in self._classifiers:
+			v = c.classify(features)
+			votes.append(v)
+		choice_votes = votes.count(mode(votes))
+		conf = choice_votes / len(votes)
+		return conf
+
+voted_classifier = VoteClassifier(MNB_classifier,
+	BernoulliNB_classifier,
+	SGDClassifier_classifier,
+	NuSVC_classifier,
+	LogisticRegression_classifier)
+print(nltk.classify.accuracy(voted_classifier, testing_set))
+print('Classification:', voted_classifier.classify(testing_set[0][0]), 'confidence:', voted_classifier.confidence(testing_set[0][0]))
+print('Classification:', voted_classifier.classify(testing_set[1][0]), 'confidence:', voted_classifier.confidence(testing_set[1][0]))
+print('Classification:', voted_classifier.classify(testing_set[2][0]), 'confidence:', voted_classifier.confidence(testing_set[2][0]))
 
 
 
